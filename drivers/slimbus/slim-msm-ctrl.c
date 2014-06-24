@@ -26,6 +26,11 @@
 #include <linux/of_slimbus.h>
 #include <mach/sps.h>
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+#include <linux/synaptics_i2c_rmi.h>
+int in_phone_call = 0;
+#endif
+
 #define SLIM_RX_MSGQ_BUF_LEN	40
 
 #define SLIM_USR_MC_GENERIC_ACK		0x25
@@ -217,8 +222,8 @@ enum mgr_intr {
 
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
-	CLK_GEAR	= 7,
-	ROOT_FREQ	= 11,
+	CLK_GEAR	= 10,
+	ROOT_FREQ	= 22,
 	REF_CLK_GEAR	= 15,
 };
 
@@ -1392,6 +1397,9 @@ send_capability:
 			gen_ack = true;
 			pr_info("[AUD] SAT connect MC:0x%x,LA:0x%x", txn.mc,
 					sat->satcl.laddr);
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+			in_phone_call = 1;
+#endif
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 			break;
 		case SLIM_USR_MC_DISCONNECT_PORT:
@@ -1405,6 +1413,9 @@ send_capability:
 			txn.wbuf = wbuf;
 			gen_ack = true;
 			pr_info("[AUD] SAT disconnect LA:0x%x", sat->satcl.laddr);
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+			in_phone_call = 0;
+#endif
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 		default:
 			break;
