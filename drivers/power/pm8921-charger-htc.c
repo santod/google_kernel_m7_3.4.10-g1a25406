@@ -2558,7 +2558,7 @@ int adjust_chg_vin_min(struct pm8921_chg_chip *chip,
 #define ADJUST_VDDMAX_VALUE	100
 static int decrease_vddmax_configure_work(void)
 {
-	int vbat_mv;
+	int vbat_mv = 0;
 
 	
 	if (!the_chip) {
@@ -3017,12 +3017,12 @@ static void adjust_vdd_max_for_fastchg(struct pm8921_chg_chip *chip)
 		target_vdd_max = chip->max_voltage_mv + vdd_max_increase_mv;
 
 	last_delta_mv = delta_mv =  target_vdd_max - vbat_batt_terminal_mv;
-	pr_info("%s: rconn_mohm=%d, reg_loop=0x%x, vbat_uv=%d, ichg_ma=%d, "
+	/*pr_info("%s: rconn_mohm=%d, reg_loop=0x%x, vbat_uv=%d, ichg_ma=%d, "
 			"vbat_terminal_mv=%d, delta_mv=%d, ichg_regulation_thr_ua=%d, "
 			"target_vdd_max=%d, ichg_threshold_ua=%d\n",
 			__func__, chip->rconn_mohm, reg_loop, vbat_uv, ichg_meas_ma,
 			vbat_batt_terminal_mv, delta_mv, chip->ichg_regulation_thr_ua,
-			target_vdd_max, ichg_threshold_ua);
+			target_vdd_max, ichg_threshold_ua);*/
 	if (delta_mv > delta_threshold_mv && delta_mv <= 0) {
 		pr_debug("skip delta_mv=%d since it is between %d and 0\n",
 				delta_mv, delta_threshold_mv);
@@ -3040,10 +3040,10 @@ static void adjust_vdd_max_for_fastchg(struct pm8921_chg_chip *chip)
 	else if ( adj_vdd_max_mv < chip->max_voltage_mv )
 		adj_vdd_max_mv = chip->max_voltage_mv;
 
-	pr_info("%s: adjusting vdd_max_mv to %d from %d to make "
+	/*pr_info("%s: adjusting vdd_max_mv to %d from %d to make "
 		"vbat_batt_termial_uv = %d to %d\n",
 		__func__, adj_vdd_max_mv, programmed_vdd_max, vbat_batt_terminal_uv,
-		chip->max_voltage_mv);
+		chip->max_voltage_mv);*/
 	pm_chg_vddmax_set(chip, adj_vdd_max_mv);
 }
 
@@ -3600,7 +3600,7 @@ finish_due_to_no_cable:
 
 static int find_usb_ma_value(int value)
 {
-	int i;
+	int i = 0;
 
 	for (i = ARRAY_SIZE(usb_ma_table) - 1; i >= 0; i--) {
 		if (value >= usb_ma_table[i].usb_ma)
@@ -4250,7 +4250,7 @@ static void unplug_check_worker(struct work_struct *work)
 	struct pm8921_chg_chip *chip = container_of(dwork,
 				struct pm8921_chg_chip, unplug_check_work);
 	u8 reg_loop, active_path;
-	int rc, ibat, active_chg_plugged_in, usb_ma;
+	int rc, ibat, active_chg_plugged_in, usb_ma = 0;
 	int chg_gone = 0, is_wlc_remove = 0;
 	unsigned long time_since_last_update_ms, cur_jiffies;
 	static int rb_trial_count = 0;
@@ -6667,7 +6667,7 @@ static const struct dev_pm_ops pm8921_charger_pm_ops = {
 
 static void ext_usb_vbatdet_irq_handler(struct work_struct *w)
 {
-	int result;
+	int result = 0;
 
 	pm8921_get_batt_voltage(&result);
 
@@ -6696,7 +6696,7 @@ static void ext_usb_vbatdet_irq_handler(struct work_struct *w)
 
 static void ext_usb_chgdone_irq_handler(struct work_struct *w)
 {
-	int result;
+	int result =0;
 
 	pm8921_get_batt_voltage(&result);
 
