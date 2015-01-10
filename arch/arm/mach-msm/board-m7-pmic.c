@@ -550,6 +550,7 @@ pm8921_bms_pdata __devinitdata = {
 	.store_batt_data_soc_thre	= 100,
 	.criteria_sw_est_ocv			= 86400000, 
 	.rconn_mohm_sw_est_ocv		= 10,
+	.qb_mode_cc_criteria_uAh = 10000, 
 };
 
 static int __init check_dq_setup(char *str)
@@ -572,7 +573,7 @@ __setup("androidboot.dq=", check_dq_setup);
 static struct pm8xxx_vibrator_platform_data pm8xxx_vib_pdata = {
 	.initial_vibrate_ms = 0,
 	.max_timeout_ms = 15000,
-	.level_mV = 2000,
+	.level_mV = 2700,
 	.threshold = 500,
 	};
 

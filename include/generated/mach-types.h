@@ -1229,6 +1229,14 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_T6_DUG               4579
 #define MACH_TYPE_T6_DWG               4580
 #define MACH_TYPE_ZARA                 4605
+#define MACH_TYPE_ZARA_CL              4615
+#define MACH_TYPE_T6_UL                4642
+#define MACH_TYPE_T6_U                 4643
+#define MACH_TYPE_T6_ULA               4644
+#define MACH_TYPE_T6_WL                4645
+#define MACH_TYPE_T6_WHL               4646
+#define MACH_TYPE_ZARA_WL              4712
+#define MACH_TYPE_CP5_WL               4721
 
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type
@@ -15832,6 +15840,102 @@ extern unsigned int __machine_arch_type;
 # define machine_is_zara()	(machine_arch_type == MACH_TYPE_ZARA)
 #else
 # define machine_is_zara()	(0)
+#endif
+
+#ifdef CONFIG_MACH_ZARA_CL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_ZARA_CL
+# endif
+# define machine_is_zara_cl()	(machine_arch_type == MACH_TYPE_ZARA_CL)
+#else
+# define machine_is_zara_cl()	(0)
+#endif
+
+#ifdef CONFIG_MACH_T6_UL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_T6_UL
+# endif
+# define machine_is_t6_ul()	(machine_arch_type == MACH_TYPE_T6_UL)
+#else
+# define machine_is_t6_ul()	(0)
+#endif
+
+#ifdef CONFIG_MACH_T6_U
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_T6_U
+# endif
+# define machine_is_t6_u()	(machine_arch_type == MACH_TYPE_T6_U)
+#else
+# define machine_is_t6_u()	(0)
+#endif
+
+#ifdef CONFIG_MACH_T6_ULA
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_T6_ULA
+# endif
+# define machine_is_t6_ula()	(machine_arch_type == MACH_TYPE_T6_ULA)
+#else
+# define machine_is_t6_ula()	(0)
+#endif
+
+#ifdef CONFIG_MACH_T6_WL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_T6_WL
+# endif
+# define machine_is_t6_wl()	(machine_arch_type == MACH_TYPE_T6_WL)
+#else
+# define machine_is_t6_wl()	(0)
+#endif
+
+#ifdef CONFIG_MACH_T6_WHL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_T6_WHL
+# endif
+# define machine_is_t6_whl()	(machine_arch_type == MACH_TYPE_T6_WHL)
+#else
+# define machine_is_t6_whl()	(0)
+#endif
+
+#ifdef CONFIG_MACH_ZARA_WL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_ZARA_WL
+# endif
+# define machine_is_zara_wl()	(machine_arch_type == MACH_TYPE_ZARA_WL)
+#else
+# define machine_is_zara_wl()	(0)
+#endif
+
+#ifdef CONFIG_MACH_CP5_WL
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_CP5_WL
+# endif
+# define machine_is_cp5_wl()	(machine_arch_type == MACH_TYPE_CP5_WL)
+#else
+# define machine_is_cp5_wl()	(0)
 #endif
 
 /*

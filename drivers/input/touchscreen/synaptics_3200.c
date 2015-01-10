@@ -2193,6 +2193,24 @@ static int register_sr_touch_device(void)
 	return SUCCESS;
 }
 
+static ssize_t get_en_sr(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct synaptics_ts_data *ts = gl_ts;
+	size_t count = 0;
+
+	if (ts->sr_input_dev)
+	{
+		count += sprintf(buf + count, "%s ", ts->sr_input_dev->name);
+		count += sprintf(buf + count, "\n");
+	}
+	else
+		count += sprintf(buf + count, "0\n");
+
+
+	return count;
+}
+
 static ssize_t set_en_sr(struct device *dev, struct device_attribute *attr,
 						const char *buf, size_t count)
 {
@@ -2206,7 +2224,7 @@ static ssize_t set_en_sr(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-static DEVICE_ATTR(sr_en, S_IWUSR, 0, set_en_sr);
+static DEVICE_ATTR(sr_en, (S_IWUSR|S_IRUGO), get_en_sr, set_en_sr);
 
 static struct kobject *android_touch_kobj;
 
@@ -2744,7 +2762,8 @@ static void dt2w_func(int x, int y, cputime64_t trigger_time)
 static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 {
 	int ret;
-	uint8_t buf[ts->finger_support * 8 ], noise_index[10], noise_state = 0;
+	uint8_t buf[ts->finger_support * 8 ], noise_index[10];
+	uint16_t temp_im = 0, temp_cidim = 0;
 	static int x_pos[10] = {0}, y_pos[10] = {0};
 
 	cputime64_t dt_trigger_time;
@@ -2758,15 +2777,9 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 		ret = i2c_syn_read(ts->client,
 			get_address_base(ts, ts->finger_func_idx, DATA_BASE), buf, sizeof(buf));
 		ret = i2c_syn_read(ts->client,
-			get_address_base(ts, 0x54, DATA_BASE) + 8, &noise_state, 1);
-		if (noise_state == 2) {
-			ret = i2c_syn_read(ts->client,
-				get_address_base(ts, 0x54, DATA_BASE) + 4, noise_index, sizeof(noise_index));
-			ts->debug_log_level |= BIT(17);
-		} else {
-			if (!ts->enable_noise_log)
-				ts->debug_log_level &= ~BIT(17);
-		}
+			get_address_base(ts, 0x54, DATA_BASE) + 4, noise_index, sizeof(noise_index));
+		temp_im = (noise_index[1] <<8) | noise_index[0];
+		temp_cidim = (noise_index[6] <<8) | noise_index[5];
 	}
 	if (ret < 0) {
 		i2c_syn_error_handler(ts, ts->i2c_err_handler_en, "r:1", __func__);
@@ -2846,16 +2859,18 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 					if (ts->layout[1] < finger_data[i][0])
 						finger_data[i][0] = ts->layout[1];
 					if(ts->width_factor && ts->height_factor){
-						/*printk(KERN_DEBUG
-							"[TP] Screen:F[%02d]:Up, X=%d, Y=%d, W=%d, Z=%d\n",
+						printk(KERN_DEBUG
+							"[TP] Screen:F[%02d]:Up, X=%d, Y=%d, W=%d, Z=%d, IM:%d, CIDIM:%d, Freq:%d, NS:%d\n",
 							i+1, (x_pos[i]*ts->width_factor)>>SHIFT_BITS,
 							(y_pos[i]*ts->height_factor)>>SHIFT_BITS,
-							finger_data[i][2], finger_data[i][3]);*/
+							finger_data[i][2], finger_data[i][3],
+							temp_im, temp_cidim, noise_index[9], noise_index[4]);
 					} else {
-						printk(KERN_DEBUG
-							"[TP] Raw:F[%02d]:Up, X=%d, Y=%d, W=%d, Z=%d\n",
+						printk(KERN_INFO
+							"[TP] Raw:F[%02d]:Up, X=%d, Y=%d, W=%d, Z=%d, IM:%d, CIDIM:%d, Freq:%d, NS:%d\n",
 							i+1, x_pos[i], y_pos[i],
-							finger_data[i][2], finger_data[i][3]);
+							finger_data[i][2], finger_data[i][3],
+							temp_im, temp_cidim, noise_index[9], noise_index[4]);
 					}
 				}
 				base += 5;
@@ -3043,7 +3058,7 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 							   last_touch_position_y = finger_data[i][1];
 
 							   if (!report_htc_logo_area(last_touch_position_x,last_touch_position_y)) {
-								if (scr_suspended && in_phone_call == 1) {
+								if (scr_suspended && phone_call_stat == 1) {
 									finger_data[i][0] = -10;
 									finger_data[i][1] = -10; 
 								}
@@ -3097,16 +3112,18 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 
 						if ((finger_press_changed & BIT(i)) && ts->debug_log_level & BIT(3)) {
 							if(ts->width_factor && ts->height_factor){
-								/*printk(KERN_DEBUG
-									"[TP] Screen:F[%02d]:Down, X=%d, Y=%d, W=%d, Z=%d\n",
+								printk(KERN_DEBUG
+									"[TP] Screen:F[%02d]:Down, X=%d, Y=%d, W=%d, Z=%d, IM:%d, CIDIM:%d, Freq:%d, NS:%d\n",
 									i+1, (finger_data[i][0]*ts->width_factor)>>SHIFT_BITS,
 									(finger_data[i][1]*ts->height_factor)>>SHIFT_BITS,
-									finger_data[i][2], finger_data[i][3]);*/
+									finger_data[i][2], finger_data[i][3],
+									temp_im, temp_cidim, noise_index[9], noise_index[4]);
 							} else {
-								printk(KERN_DEBUG
-									"[TP] Raw:F[%02d]:Down, X=%d, Y=%d, W=%d, Z=%d\n",
+								printk(KERN_INFO
+									"[TP] Raw:F[%02d]:Down, X=%d, Y=%d, W=%d, Z=%d, IM:%d, CIDIM:%d, Freq:%d, NS:%d\n",
 									i+1, finger_data[i][0], finger_data[i][1],
-									finger_data[i][2], finger_data[i][3]);
+									finger_data[i][2], finger_data[i][3],
+									temp_im, temp_cidim, noise_index[9], noise_index[4]);
 							}
 							if ((ts->block_touch_time_near | ts->block_touch_time_far) && ts->block_touch_event)
 								printk(KERN_INFO "[TP] Block This Event!!\n");

@@ -26,11 +26,6 @@
 #include <linux/of_slimbus.h>
 #include <mach/sps.h>
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
-#include <linux/synaptics_i2c_rmi.h>
-int in_phone_call = 0;
-#endif
-
 #define SLIM_RX_MSGQ_BUF_LEN	40
 
 #define SLIM_USR_MC_GENERIC_ACK		0x25
@@ -222,8 +217,8 @@ enum mgr_intr {
 
 enum frm_cfg {
 	FRM_ACTIVE	= 1,
-	CLK_GEAR	= 10,
-	ROOT_FREQ	= 22,
+	CLK_GEAR	= 7,
+	ROOT_FREQ	= 11,
 	REF_CLK_GEAR	= 15,
 };
 
@@ -1397,9 +1392,6 @@ send_capability:
 			gen_ack = true;
 			pr_info("[AUD] SAT connect MC:0x%x,LA:0x%x", txn.mc,
 					sat->satcl.laddr);
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
-			in_phone_call = 1;
-#endif
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 			break;
 		case SLIM_USR_MC_DISCONNECT_PORT:
@@ -1413,9 +1405,6 @@ send_capability:
 			txn.wbuf = wbuf;
 			gen_ack = true;
 			pr_info("[AUD] SAT disconnect LA:0x%x", sat->satcl.laddr);
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
-			in_phone_call = 0;
-#endif
 			ret = msm_xfer_msg(&dev->ctrl, &txn);
 		default:
 			break;
@@ -2086,10 +2075,28 @@ static int __devinit msm_slim_probe(struct platform_device *pdev)
 	dev_dbg(dev->dev, "MSM SB controller is up!\n");
 	return 0;
 
-err_ctrl_failed:
-	writel_relaxed(0, dev->base + CFG_PORT(COMP_CFG, dev->ver));
 err_clk_get_failed:
-	kfree(dev->satd);
+	{
+		int i;
+		for (i = 0; i < dev->nsats; i++) {
+			struct msm_slim_sat *sat = dev->satd[i];
+			int j;
+			if (!sat)
+				continue;
+			for (j = 0; j < sat->nsatch; j++)
+				slim_dealloc_ch(&sat->satcl, sat->satch[j].chanh);
+			slim_remove_device(&sat->satcl);
+			kfree(sat->satch);
+			if (sat->wq)
+				destroy_workqueue(sat->wq);
+			kfree(sat->satcl.name);
+			kfree(sat);
+		}
+	}
+	slim_del_controller(&dev->ctrl);
+err_ctrl_failed:
+	free_irq(dev->irq, dev);
+	writel_relaxed(0, dev->base + CFG_PORT(COMP_CFG, dev->ver));
 err_request_irq_failed:
 	msm_slim_sps_exit(dev);
 err_sps_init_failed:

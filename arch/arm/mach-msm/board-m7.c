@@ -555,7 +555,6 @@ static void __init apq8064_reserve_fixed_area(unsigned long fixed_area_size)
 {
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 	int ret;
-
 	if (fixed_area_size > MAX_FIXED_AREA_SIZE)
 		panic("fixed area size is larger than %dM\n",
 			MAX_FIXED_AREA_SIZE >> 20);
@@ -932,6 +931,9 @@ static struct htc_battery_platform_data htc_battery_pdev_data = {
 	.igauge.store_battery_data = pm8921_bms_store_battery_data_emmc,
 	.igauge.store_battery_ui_soc = pm8921_bms_store_battery_ui_soc,
 	.igauge.get_battery_ui_soc = pm8921_bms_get_battery_ui_soc,
+	.igauge.enter_qb_mode = pm8921_bms_enter_qb_mode,
+	.igauge.exit_qb_mode = pm8921_bms_exit_qb_mode,
+	.igauge.qb_mode_pwr_consumption_check = pm8921_qb_mode_pwr_consumption_check,
 	.igauge.is_battery_temp_fault = pm8921_is_batt_temperature_fault,
 	.igauge.is_battery_full = pm8921_is_batt_full,
 	.igauge.get_attr_text = pm8921_gauge_get_attr_text,
@@ -1502,12 +1504,6 @@ static struct i2c_board_info msm_i2c_mhl_sii9234_info[] =
 static struct msm_bus_vectors hsic_init_vectors[] = {
        {
                .src = MSM_BUS_MASTER_SPS,
-               .dst = MSM_BUS_SLAVE_EBI_CH0,
-               .ab = 0,
-               .ib = 0,
-       },
-       {
-               .src = MSM_BUS_MASTER_SPS,
                .dst = MSM_BUS_SLAVE_SPS,
                .ab = 0,
                .ib = 0,
@@ -1517,15 +1513,9 @@ static struct msm_bus_vectors hsic_init_vectors[] = {
 static struct msm_bus_vectors hsic_max_vectors[] = {
        {
                .src = MSM_BUS_MASTER_SPS,
-               .dst = MSM_BUS_SLAVE_EBI_CH0,
-               .ab = 60000000,         
-               .ib = 960000000,        
-       },
-       {
-               .src = MSM_BUS_MASTER_SPS,
                .dst = MSM_BUS_SLAVE_SPS,
                .ab = 0,
-               .ib = 512000000, 
+               .ib = 256000000, 
        },
 };
 
@@ -3718,14 +3708,14 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 	int rc = 0;
 
 	mutex_lock(&pl_sensor_lock);
-	pr_info("[PS][cm3629] %s: pl_sensor_lock lock\n", __func__);
+	pr_debug("[PS][cm3629] %s: pl_sensor_lock lock\n", __func__);
 
 	if (pl_reg_l16 == NULL) {
 		pl_reg_l16 = regulator_get(NULL, "8921_l16");
 		if (IS_ERR(pl_reg_l16)) {
 			pr_err("[PS][cm3629] %s: Unable to get '8921_l16' \n", __func__);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 1\n", __func__);
+			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 1\n", __func__);
 			return -ENODEV;
 		}
 	}
@@ -3739,7 +3729,7 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 2\n", __func__);
+			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 2\n", __func__);
 			return rc;
 		}
 		pr_info("[PS][cm3629] %s: enter lmp,OK\n", __func__);
@@ -3753,14 +3743,14 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 3\n", __func__);
+			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 3\n", __func__);
 			return rc;
 		}
-		pr_info("[PS][cm3629] %s: leave lmp,OK\n", __func__);
+		pr_debug("[PS][cm3629] %s: leave lmp,OK\n", __func__);
 		usleep(10);
 	}
 	mutex_unlock(&pl_sensor_lock);
-	pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 4\n", __func__);
+	pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 4\n", __func__);
 	return rc;
 }
 static struct cm3629_platform_data cm36282_pdata_sk2 = {
@@ -3779,7 +3769,7 @@ static struct cm3629_platform_data cm36282_pdata_sk2 = {
 	.ps1_thd_set = 0x15,
 	.ps1_thd_no_cal = 0x90,
 	.ps1_thd_with_cal = 0xD,
-	.ps_th_add = 5,
+	.ps_th_add = 10,
 	.ps_calibration_rule = 1,
 	.ps_conf1_val = CM3629_PS_DR_1_40 | CM3629_PS_IT_1_6T |
 			CM3629_PS1_PERS_2,
@@ -3817,7 +3807,7 @@ static struct cm3629_platform_data cm36282_pdata_r8 = {
 	.ps1_thd_set = 0x15,
 	.ps1_thd_no_cal = 0x90,
 	.ps1_thd_with_cal = 0xD,
-	.ps_th_add = 5,
+	.ps_th_add = 10,
 	.ps_calibration_rule = 1,
 	.ps_conf1_val = CM3629_PS_DR_1_40 | CM3629_PS_IT_1_6T |
 			CM3629_PS1_PERS_2,
@@ -4131,10 +4121,10 @@ static struct platform_device msm_tsens_device = {
 
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0,
-	.poll_ms = 1000,
+/*	.poll_ms = 1000,
 	.limit_temp = 51,
 	.temp_hysteresis = 10,
-	.limit_freq = 918000,
+	.limit_freq = 918000,*/
 };
 
 static int __init check_dq_setup(char *str)
@@ -4704,6 +4694,59 @@ static struct platform_device m7_device_rpm_regulator __devinitdata = {
 	},
 };
 
+
+#ifdef CONFIG_BUILD_EDIAG
+static struct android_pmem_platform_data android_pmem_ediag_pdata = {
+	.name = "pmem_ediag",
+	.start = MSM_HTC_PMEM_EDIAG_BASE,
+	.size = MSM_HTC_PMEM_EDIAG_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct android_pmem_platform_data android_pmem_ediag1_pdata = {
+	.name = "pmem_ediag1",
+	.start = MSM_HTC_PMEM_EDIAG1_BASE,
+	.size = MSM_HTC_PMEM_EDIAG1_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct android_pmem_platform_data android_pmem_ediag2_pdata = {
+	.name = "pmem_ediag2",
+	.start = MSM_HTC_PMEM_EDIAG2_BASE,
+	.size = MSM_HTC_PMEM_EDIAG2_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+static struct android_pmem_platform_data android_pmem_ediag3_pdata = {
+	.name = "pmem_ediag3",
+	.start = MSM_HTC_PMEM_EDIAG3_BASE,
+	.size = MSM_HTC_PMEM_EDIAG3_SIZE,
+	.no_allocator = 0,
+	.cached = 0,
+};
+
+
+static struct platform_device android_pmem_ediag_device = {
+	.name = "ediag_pmem",	.id = 1,
+	.dev = { .platform_data = &android_pmem_ediag_pdata },};
+
+static struct platform_device android_pmem_ediag1_device = {
+	.name = "ediag_pmem",	.id = 2,
+	.dev = { .platform_data = &android_pmem_ediag1_pdata },};
+
+static struct platform_device android_pmem_ediag2_device = {
+	.name = "ediag_pmem",	.id = 3,
+	.dev = { .platform_data = &android_pmem_ediag2_pdata },};
+
+static struct platform_device android_pmem_ediag3_device = {
+	.name = "ediag_pmem",	.id = 4,
+	.dev = { .platform_data = &android_pmem_ediag3_pdata },};
+#endif
+
+
 #define MSM_RAM_CONSOLE_BASE   MSM_HTC_RAM_CONSOLE_PHYS
 #define MSM_RAM_CONSOLE_SIZE   MSM_HTC_RAM_CONSOLE_SIZE
 
@@ -4940,6 +4983,12 @@ static struct platform_device *common_devices[] __initdata = {
 #endif
 #ifdef CONFIG_QSEECOM
 	&qseecom_device,
+#endif
+#ifdef CONFIG_BUILD_EDIAG
+	&android_pmem_ediag_device,
+	&android_pmem_ediag1_device,
+	&android_pmem_ediag2_device,
+	&android_pmem_ediag3_device,
 #endif
 	&msm8064_device_watchdog,
 	&msm8064_device_saw_regulator_core0,
@@ -5814,6 +5863,17 @@ static void __init m7_common_init(void)
 
 static void __init m7_allocate_memory_regions(void)
 {
+#ifdef CONFIG_KEXEC_HARDBOOT
+	// Reserve space for hardboot page at the end of first system ram block
+	struct membank* bank = &meminfo.bank[0];
+	phys_addr_t start = bank->start + bank->size - SZ_1M;
+	int ret = memblock_remove(start, SZ_1M);
+	if(!ret)
+		pr_info("Hardboot page reserved at 0x%X\n", start);
+	else
+		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
+#endif
+
 	m7_allocate_fb_region();
 }
 
